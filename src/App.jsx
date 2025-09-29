@@ -858,7 +858,7 @@ For detailed analysis and implementation planning, contact us to schedule your c
       
       <div className="flex flex-col space-y-2 pt-2">
         <Button 
-          onClick={() => window.open('YOUR_STRIPE_LINK_HERE', '_blank')}
+          onClick={() => window.open('https://buy.stripe.com/9B66oz2Z4caofVYcV74gg00', '_blank')}
           className="bg-green-600 hover:bg-green-700 text-white font-semibold"
           size="lg"
         >

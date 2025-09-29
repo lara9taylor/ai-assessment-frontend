@@ -839,17 +839,49 @@ For detailed analysis and implementation planning, contact us to schedule your c
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           )}
           
-          {reportStatus === 'completed' && (
-            <div className="space-y-2">
-              <CheckCircle className="h-8 w-8 mx-auto text-green-600" />
-              <p className="text-green-600 font-semibold">Report Generated Successfully!</p>
-              <p className="text-sm text-muted-foreground">Your download should start automatically.</p>
-              <Button onClick={downloadReport} className="mt-4">
-                <Download className="h-4 w-4 mr-2" />
-                Download Report
-              </Button>
-            </div>
-          )}
+{reportStatus === 'completed' && (
+  <div className="space-y-4">
+    <CheckCircle className="h-8 w-8 mx-auto text-green-600" />
+    <p className="text-green-600 font-semibold">Assessment Complete!</p>
+    
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+      <h3 className="font-semibold text-blue-800">Ready for Your Comprehensive Report?</h3>
+      <p className="text-sm text-blue-700">
+        Your free assessment is complete! Get your detailed 20+ page AI implementation roadmap with:
+      </p>
+      <ul className="text-sm text-blue-700 space-y-1 ml-4">
+        <li>• Personalized AI recommendations for your business</li>
+        <li>• ROI analysis and implementation timeline</li>
+        <li>• Step-by-step action plan</li>
+        <li>• Direct mapping to proven AI solutions</li>
+      </ul>
+      
+      <div className="flex flex-col space-y-2 pt-2">
+        <Button 
+          onClick={() => window.open('YOUR_STRIPE_LINK_HERE', '_blank')}
+          className="bg-green-600 hover:bg-green-700 text-white font-semibold"
+          size="lg"
+        >
+          Get Full Report - $499 (Reg. $999)
+        </Button>
+        
+        <Button 
+          onClick={downloadReport} 
+          variant="outline"
+          size="sm"
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Download Free Summary
+        </Button>
+      </div>
+    </div>
+    
+    <p className="text-xs text-muted-foreground">
+      Secure payment processing by Stripe • 30-day money-back guarantee
+    </p>
+  </div>
+)}
+
         </div>
       </div>
     </div>

@@ -9,6 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox.jsx';
 import { CheckCircle, AlertCircle, Loader2, Download } from 'lucide-react';
 import './App.css';
 
+const API_BASE_URL = 'https://ai-assessment-backend-v2-production.up.railway.app/api';
+
 // Comprehensive question database
 const QUESTIONS = [
   // Business Information (5 questions)

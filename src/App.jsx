@@ -6,14 +6,15 @@ import { Input } from '@/components/ui/input.jsx';
 import { Label } from '@/components/ui/label.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
 import { Checkbox } from '@/components/ui/checkbox.jsx';
-import { CheckCircle, AlertCircle, Loader2, Download } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, Download, Sparkles, Zap } from 'lucide-react';
 import './App.css';
 
+// Add your Railway backend URL here
 const API_BASE_URL = 'https://ai-assessment-backend-v2-production.up.railway.app/api';
 
 // Comprehensive question database
 const QUESTIONS = [
-  // Business Information (5 questions)
+  // Business Information (5 questions )
   {
     id: 'business_type',
     text: 'What type of business do you operate?',
@@ -641,10 +642,6 @@ function App() {
       } else {
         clearInterval(interval);
         setReportStatus('completed');
-        // Simulate download
-        setTimeout(() => {
-          downloadReport();
-        }, 1000);
       }
     }, 2000); // Update every 2 seconds
   };
@@ -661,7 +658,7 @@ function App() {
 
     // Create downloadable content
     const reportContent = `
-AI READINESS ASSESSMENT REPORT
+STATE AI STRATEGIES - AI READINESS ASSESSMENT REPORT
 Generated: ${reportData.analysisDate}
 
 BUSINESS INFORMATION:
@@ -704,7 +701,10 @@ RECOMMENDED NEXT STEPS:
 
 This assessment indicates strong potential for AI implementation with estimated ROI of 200-400% within 12 months.
 
-For detailed analysis and implementation planning, contact us to schedule your consultation.
+For detailed analysis and implementation planning, contact State AI Strategies to schedule your consultation.
+
+Visit: stateaistrategies.com
+Email: info@stateaistrategies.com
     `;
 
     // Create and download file
@@ -724,39 +724,43 @@ For detailed analysis and implementation planning, contact us to schedule your c
     const currentResponse = responses[question.id] || '';
 
     return (
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-muted-foreground">
+      <div className="question-container">
+        <div className="space-y-4 mb-6">
+          <div className="flex justify-between text-sm text-gray-600">
             <span>Question {currentQuestionIndex + 1} of {QUESTIONS.length}</span>
             <span>{Math.round(((currentQuestionIndex + 1) / QUESTIONS.length) * 100)}% Complete</span>
           </div>
-          <Progress value={((currentQuestionIndex + 1) / QUESTIONS.length) * 100} className="h-2" />
+          <div className="progress-bar h-3">
+            <div 
+              className="progress-fill h-full rounded-lg"
+              style={{ width: `${((currentQuestionIndex + 1) / QUESTIONS.length) * 100}%` }}
+            />
+          </div>
         </div>
 
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-foreground">
+        <div className="space-y-6">
+          <h2 className="question-title">
             {question.text}
           </h2>
 
           {question.type === 'single_select' && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {question.options.map((option, index) => (
-                <Button
+                <div
                   key={index}
-                  variant={currentResponse === option ? "default" : "outline"}
-                  className="w-full justify-start text-left h-auto p-4"
+                  className={`question-option ${currentResponse === option ? 'selected' : ''}`}
                   onClick={() => handleResponse(question.id, option)}
                 >
                   {option}
-                </Button>
+                </div>
               ))}
             </div>
           )}
 
           {question.type === 'multiple_select' && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {question.options.map((option, index) => (
-                <div key={index} className="flex items-center space-x-2 p-3 border rounded-lg">
+                <div key={index} className="flex items-center space-x-3 question-option">
                   <Checkbox
                     id={`${question.id}_${index}`}
                     checked={(currentResponse || []).includes(option)}
@@ -782,32 +786,36 @@ For detailed analysis and implementation planning, contact us to schedule your c
               placeholder="Please provide your response..."
               value={currentResponse}
               onChange={(e) => handleResponse(question.id, e.target.value)}
-              className="min-h-[100px]"
+              className="min-h-[120px] border-2 focus:border-[var(--green)]"
             />
           )}
         </div>
 
         {error && (
-          <div className="flex items-center space-x-2 text-destructive">
+          <div className="flex items-center space-x-2 text-red-600 mt-4">
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm">{error}</span>
           </div>
         )}
 
-        <div className="flex justify-between">
+        <div className="flex justify-between mt-8">
           <Button
             variant="outline"
             onClick={previousQuestion}
             disabled={currentQuestionIndex === 0}
+            className="btn-secondary"
           >
             Previous
           </Button>
-          <Button onClick={nextQuestion}>
+          <Button 
+            onClick={nextQuestion}
+            className="btn-primary"
+          >
             {currentQuestionIndex === QUESTIONS.length - 1 ? 'Generate Report' : 'Continue'}
           </Button>
         </div>
 
-        <div className="text-center text-sm text-muted-foreground">
+        <div className="text-center text-sm text-gray-500 mt-4">
           Section: {question.section.toUpperCase().replace('_', ' ')}
         </div>
       </div>
@@ -815,73 +823,85 @@ For detailed analysis and implementation planning, contact us to schedule your c
   };
 
   const ReportProgress = () => (
-    <div className="max-w-md mx-auto space-y-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold">Generating Your Report</h2>
-        <p className="text-muted-foreground">
-          Please wait while we compile your comprehensive AI assessment report...
-        </p>
-      </div>
-      
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Progress</span>
-            <span>{reportProgress}%</span>
-          </div>
-          <Progress value={reportProgress} className="h-3" />
+    <div className="assessment-content">
+      <div className="assessment-card">
+        <div className="assessment-header">
+          <Sparkles className="h-12 w-12 mx-auto mb-4 text-[var(--yellow)]" />
+          <h2 className="assessment-title">Generating Your <span className="ai-highlight">AI</span> Report</h2>
+          <p className="assessment-subtitle">
+            Please wait while we compile your comprehensive AI assessment report...
+          </p>
         </div>
         
-        <div className="text-center space-y-4">
-          <p className="text-sm text-muted-foreground">{reportMessage}</p>
-          
-          {reportStatus === 'generating' && (
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          )}
-          
-{reportStatus === 'completed' && (
-  <div className="space-y-4">
-    <CheckCircle className="h-8 w-8 mx-auto text-green-600" />
-    <p className="text-green-600 font-semibold">Assessment Complete!</p>
-    
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-      <h3 className="font-semibold text-blue-800">Ready for Your Comprehensive Report?</h3>
-      <p className="text-sm text-blue-700">
-        Your free assessment is complete! Get your detailed 20+ page AI implementation roadmap with:
-      </p>
-      <ul className="text-sm text-blue-700 space-y-1 ml-4">
-        <li>• Personalized AI recommendations for your business</li>
-        <li>• ROI analysis and implementation timeline</li>
-        <li>• Step-by-step action plan</li>
-        <li>• Direct mapping to proven AI solutions</li>
-      </ul>
-      
-      <div className="flex flex-col space-y-2 pt-2">
-        <Button 
-          onClick={() => window.open('https://buy.stripe.com/9B66oz2Z4caofVYcV74gg00', '_blank')}
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold"
-          size="lg"
-        >
-          Get Full Report - $499 (Reg. $999)
-        </Button>
-        
-        <Button 
-          onClick={downloadReport} 
-          variant="outline"
-          size="sm"
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Download Free Summary
-        </Button>
-      </div>
-    </div>
-    
-    <p className="text-xs text-muted-foreground">
-      Secure payment processing by Stripe • 30-day money-back guarantee
-    </p>
-  </div>
-)}
-
+        <div className="question-container">
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm font-medium">
+                <span>Progress</span>
+                <span>{reportProgress}%</span>
+              </div>
+              <div className="progress-bar h-4">
+                <div 
+                  className="progress-fill h-full rounded-lg"
+                  style={{ width: `${reportProgress}%` }}
+                />
+              </div>
+            </div>
+            
+            <div className="text-center space-y-6">
+              <p className="text-gray-600">{reportMessage}</p>
+              
+              {reportStatus === 'generating' && (
+                <Loader2 className="h-12 w-12 animate-spin mx-auto text-[var(--green)]" />
+              )}
+              
+              {reportStatus === 'completed' && (
+                <div className="space-y-6">
+                  <CheckCircle className="h-12 w-12 mx-auto text-[var(--green)]" />
+                  <p className="text-[var(--green)] font-semibold text-lg">Assessment Complete!</p>
+                  
+                  <div className="value-box">
+                    <h3 className="value-title">
+                      <Zap className="inline h-5 w-5 mr-2 spark-accent" />
+                      Ready for Your Comprehensive Report?
+                    </h3>
+                    <p className="text-gray-700 mb-4">
+                      Your free assessment is complete! Get your detailed 20+ page <span className="ai-highlight">AI</span> implementation roadmap with:
+                    </p>
+                    <ul className="text-gray-700 space-y-2 mb-6 text-left">
+                      <li>• Personalized <span className="ai-highlight">AI</span> recommendations for your business</li>
+                      <li>• ROI analysis and implementation timeline</li>
+                      <li>• Step-by-step action plan</li>
+                      <li>• Direct mapping to proven <span className="ai-highlight">AI</span> solutions</li>
+                    </ul>
+                    
+                    <div className="flex flex-col space-y-3">
+                      <Button 
+                        onClick={() => window.open('https://buy.stripe.com/9B66oz2Z4caofVYcV74gg00', '_blank')}
+                        className="btn-accent text-lg font-bold py-4"
+                        size="lg"
+                      >
+                        Get Full Report - $499 <span className="text-sm opacity-75">(Reg. $999)</span>
+                      </Button>
+                      
+                      <Button 
+                        onClick={downloadReport} 
+                        variant="outline"
+                        className="btn-secondary"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Free Summary
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-gray-500">
+                    Secure payment processing by Stripe • 30-day money-back guarantee
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -889,112 +909,119 @@ For detailed analysis and implementation planning, contact us to schedule your c
 
   if (currentStep === 'report') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-8">
-            <ReportProgress />
-          </CardContent>
-        </Card>
+      <div className="assessment-container">
+        <ReportProgress />
       </div>
     );
   }
 
   if (currentStep === 'questions') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl">
-          <CardContent className="p-8">
+      <div className="assessment-container">
+        <div className="assessment-content">
+          <div className="assessment-card">
             {renderQuestion()}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-4">
-          <CardTitle className="text-3xl font-bold">AI Readiness Assessment</CardTitle>
-          <CardDescription className="text-base">
-            Discover how AI can transform your business operations and drive growth
-          </CardDescription>
-          
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-4">
-              <h3 className="font-semibold text-blue-800 mb-3">What You'll Get:</h3>
-              <ul className="text-left text-blue-700 space-y-1 text-sm">
+    <div className="assessment-container">
+      <div className="assessment-content">
+        <div className="assessment-card">
+          <div className="assessment-header">
+            <Sparkles className="h-16 w-16 mx-auto mb-4 text-[var(--yellow)]" />
+            <h1 className="assessment-title">
+              <span className="ai-highlight">AI</span> Readiness Assessment
+            </h1>
+            <p className="assessment-subtitle">
+              Discover how AI can transform your business operations and drive growth
+            </p>
+            
+            <div className="value-box mt-6">
+              <h3 className="value-title text-white">
+                <Zap className="inline h-5 w-5 mr-2 spark-accent" />
+                What You'll Get:
+              </h3>
+              <ul className="text-white space-y-2 text-left opacity-90">
                 <li>• Comprehensive analysis of your business operations</li>
-                <li>• Identification of AI automation opportunities</li>
+                <li>• Identification of <span className="ai-highlight">AI</span> automation opportunities</li>
                 <li>• Personalized recommendations with ROI estimates</li>
                 <li>• Professional 20+ page implementation roadmap</li>
-                <li>• Direct mapping to proven AI solutions</li>
+                <li>• Direct mapping to proven <span className="ai-highlight">AI</span> solutions</li>
               </ul>
-            </CardContent>
-          </Card>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="businessName">Business Name *</Label>
-              <Input
-                id="businessName"
-                placeholder="Enter your business name"
-                value={businessInfo.businessName}
-                onChange={(e) => handleInputChange('businessName', e.target.value)}
-              />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactName">Your Name *</Label>
-              <Input
-                id="contactName"
-                placeholder="Enter your full name"
-                value={businessInfo.contactName}
-                onChange={(e) => handleInputChange('contactName', e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactEmail">Email Address *</Label>
-              <Input
-                id="contactEmail"
-                type="email"
-                placeholder="Enter your email address"
-                value={businessInfo.contactEmail}
-                onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-              />
-            </div>
-
-            {error && (
-              <div className="flex items-center space-x-2 text-destructive">
-                <AlertCircle className="h-4 w-4" />
-                <span className="text-sm">{error}</span>
-              </div>
-            )}
-
-            <Button
-              onClick={startAssessment}
-              disabled={loading}
-              className="w-full"
-              size="lg"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Starting Assessment...
-                </>
-              ) : (
-                'Begin Assessment ($499 Value)'
-              )}
-            </Button>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="question-container">
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <Label htmlFor="businessName" className="text-base font-semibold">Business Name *</Label>
+                <Input
+                  id="businessName"
+                  placeholder="Enter your business name"
+                  value={businessInfo.businessName}
+                  onChange={(e) => handleInputChange('businessName', e.target.value)}
+                  className="border-2 focus:border-[var(--green)] text-lg p-4"
+                />
+              </div>
+
+              <div className="space-y-4">
+                <Label htmlFor="contactName" className="text-base font-semibold">Your Name *</Label>
+                <Input
+                  id="contactName"
+                  placeholder="Enter your full name"
+                  value={businessInfo.contactName}
+                  onChange={(e) => handleInputChange('contactName', e.target.value)}
+                  className="border-2 focus:border-[var(--green)] text-lg p-4"
+                />
+              </div>
+
+              <div className="space-y-4">
+                <Label htmlFor="contactEmail" className="text-base font-semibold">Email Address *</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={businessInfo.contactEmail}
+                  onChange={(e) => handleInputChange('contactEmail', e.target.value)}
+                  className="border-2 focus:border-[var(--green)] text-lg p-4"
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-center space-x-2 text-red-600">
+                  <AlertCircle className="h-5 w-5" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <Button
+                onClick={startAssessment}
+                disabled={loading}
+                className="btn-primary w-full text-lg font-bold py-4"
+                size="lg"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Starting Assessment...
+                  </>
+                ) : (
+                  <>
+                    Begin Assessment ($499 Value)
+                    <Sparkles className="h-5 w-5 ml-2" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default App;
-

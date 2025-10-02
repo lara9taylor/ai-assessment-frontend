@@ -6,15 +6,18 @@ import { Input } from '@/components/ui/input.jsx';
 import { Label } from '@/components/ui/label.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
 import { Checkbox } from '@/components/ui/checkbox.jsx';
-import { CheckCircle, AlertCircle, Loader2, Download, Sparkles, Zap } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, Download } from 'lucide-react';
 import './App.css';
 
-// Add your Railway backend URL here
+// Stripe Payment Link
+const STRIPE_PAYMENT_URL = 'https://buy.stripe.com/9B66oz2Z4caofVYcV74gg00';
+
+// Railway backend URL
 const API_BASE_URL = 'https://ai-assessment-backend-v2-production.up.railway.app/api';
 
 // Comprehensive question database
 const QUESTIONS = [
-  // Business Information (5 questions )
+  // Business Information (5 questions)
   {
     id: 'business_type',
     text: 'What type of business do you operate?',
@@ -548,6 +551,23 @@ function App() {
   const [reportStatus, setReportStatus] = useState('not_started');
   const [reportMessage, setReportMessage] = useState('');
 
+  // Check for payment success on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get('payment_success');
+    const storedBusinessInfo = localStorage.getItem('businessInfo');
+
+    if (paymentSuccess === 'true' && storedBusinessInfo) {
+      // Payment successful, restore business info and start questions
+      setBusinessInfo(JSON.parse(storedBusinessInfo));
+      setCurrentStep('questions');
+      localStorage.removeItem('businessInfo');
+      
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   const handleInputChange = (field, value) => {
     setBusinessInfo(prev => ({
       ...prev,
@@ -575,8 +595,14 @@ function App() {
       return;
     }
 
-    setCurrentStep('questions');
+    setLoading(true);
     setError('');
+
+    // Store business info for after payment
+    localStorage.setItem('businessInfo', JSON.stringify(businessInfo));
+    
+    // Redirect to Stripe payment
+    window.location.href = STRIPE_PAYMENT_URL;
   };
 
   const handleResponse = (questionId, value) => {
@@ -615,108 +641,112 @@ function App() {
     }
   };
 
-  const generateReport = () => {
+  const generateReport = async () => {
     setCurrentStep('report');
     setReportStatus('generating');
     setReportProgress(0);
     setReportMessage('Initializing comprehensive business analysis...');
 
-    // Simulate report generation with progress updates
-    const progressSteps = [
-      { progress: 15, message: 'Analyzing business data and responses...' },
-      { progress: 30, message: 'Identifying operational pain points...' },
-      { progress: 45, message: 'Calculating AI opportunity scores...' },
-      { progress: 60, message: 'Generating personalized recommendations...' },
-      { progress: 75, message: 'Creating implementation roadmap...' },
-      { progress: 90, message: 'Finalizing comprehensive report...' },
-      { progress: 100, message: 'Report generation complete!' }
-    ];
+    try {
+      // First, start the assessment session
+      const startResponse = await fetch(`${API_BASE_URL}/start-assessment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          business_name: businessInfo.businessName,
+          contact_email: businessInfo.contactEmail,
+          contact_name: businessInfo.contactName
+        })
+      });
 
-    let stepIndex = 0;
-    const interval = setInterval(() => {
-      if (stepIndex < progressSteps.length) {
-        const step = progressSteps[stepIndex];
-        setReportProgress(step.progress);
-        setReportMessage(step.message);
-        stepIndex++;
-      } else {
-        clearInterval(interval);
-        setReportStatus('completed');
+      if (!startResponse.ok) {
+        throw new Error('Failed to start assessment');
       }
-    }, 2000); // Update every 2 seconds
+
+      const startData = await startResponse.json();
+      const sessionId = startData.session_id;
+
+      // Then submit responses
+      const submitResponse = await fetch(`${API_BASE_URL}/submit-responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          responses: responses
+        })
+      });
+
+      if (!submitResponse.ok) {
+        throw new Error('Failed to submit responses');
+      }
+
+      // Simulate progress updates
+      const progressSteps = [
+        { progress: 15, message: 'Analyzing business data and responses...' },
+        { progress: 30, message: 'Identifying operational pain points...' },
+        { progress: 45, message: 'Calculating AI opportunity scores...' },
+        { progress: 60, message: 'Generating personalized recommendations...' },
+        { progress: 75, message: 'Creating implementation roadmap...' },
+        { progress: 90, message: 'Finalizing comprehensive 20+ page report...' },
+        { progress: 100, message: 'Report generation complete!' }
+      ];
+
+      let stepIndex = 0;
+      const interval = setInterval(() => {
+        if (stepIndex < progressSteps.length) {
+          const step = progressSteps[stepIndex];
+          setReportProgress(step.progress);
+          setReportMessage(step.message);
+          stepIndex++;
+        } else {
+          clearInterval(interval);
+          setReportStatus('completed');
+          // Store session ID for download
+          localStorage.setItem('sessionId', sessionId);
+          setTimeout(() => {
+            downloadReport(sessionId);
+          }, 1000);
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      setReportStatus('error');
+      setReportMessage('Error generating report. Please try again or contact support.');
+    }
   };
 
-  const downloadReport = () => {
-    // Create a comprehensive report summary
-    const reportData = {
-      businessInfo,
-      responses,
-      analysisDate: new Date().toLocaleDateString(),
-      totalQuestions: QUESTIONS.length,
-      completionRate: '100%'
-    };
+  const downloadReport = async (sessionId) => {
+    try {
+      // Get session ID from parameter or localStorage
+      const sid = sessionId || localStorage.getItem('sessionId');
+      
+      if (!sid) {
+        console.error('No session ID found');
+        return;
+      }
 
-    // Create downloadable content
-    const reportContent = `
-STATE AI STRATEGIES - AI READINESS ASSESSMENT REPORT
-Generated: ${reportData.analysisDate}
-
-BUSINESS INFORMATION:
-- Business Name: ${businessInfo.businessName}
-- Contact: ${businessInfo.contactName}
-- Email: ${businessInfo.contactEmail}
-
-ASSESSMENT SUMMARY:
-- Total Questions Completed: ${QUESTIONS.length}
-- Completion Rate: 100%
-
-KEY FINDINGS:
-Based on your responses, we've identified several opportunities for AI implementation:
-
-1. OPERATIONAL EFFICIENCY
-   - Automation opportunities in manual processes
-   - Workflow optimization potential
-   - Quality control improvements
-
-2. CUSTOMER EXPERIENCE
-   - Personalization opportunities
-   - Service automation potential
-   - Communication enhancements
-
-3. DATA & ANALYTICS
-   - Business intelligence improvements
-   - Predictive analytics opportunities
-   - Real-time monitoring capabilities
-
-4. FINANCIAL OPTIMIZATION
-   - Cost reduction opportunities
-   - Revenue optimization potential
-   - ROI improvement strategies
-
-RECOMMENDED NEXT STEPS:
-1. Schedule a consultation to discuss specific AI solutions
-2. Prioritize high-impact, low-complexity implementations
-3. Develop a phased implementation roadmap
-4. Consider pilot programs for key areas
-
-This assessment indicates strong potential for AI implementation with estimated ROI of 200-400% within 12 months.
-
-For detailed analysis and implementation planning, contact State AI Strategies to schedule your consultation.
-
-Visit: stateaistrategies.com
-Email: info@stateaistrategies.com
-    `;
-
-    // Create and download file
-    const blob = new Blob([reportContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `AI_Assessment_Report_${businessInfo.businessName.replace(/\s+/g, '_')}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      // Download PDF report from backend
+      const downloadUrl = `${API_BASE_URL}/download-report/${sid}`;
+      
+      // Open download in new window
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `AI_Assessment_Report_${businessInfo.businessName.replace(/\s+/g, '_')}.pdf`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up
+      localStorage.removeItem('sessionId');
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      setReportMessage('Error downloading report. Please contact support.');
+    }
   };
 
   const renderQuestion = () => {
@@ -724,43 +754,39 @@ Email: info@stateaistrategies.com
     const currentResponse = responses[question.id] || '';
 
     return (
-      <div className="question-container">
-        <div className="space-y-4 mb-6">
-          <div className="flex justify-between text-sm text-gray-600">
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm text-muted-foreground">
             <span>Question {currentQuestionIndex + 1} of {QUESTIONS.length}</span>
             <span>{Math.round(((currentQuestionIndex + 1) / QUESTIONS.length) * 100)}% Complete</span>
           </div>
-          <div className="progress-bar h-3">
-            <div 
-              className="progress-fill h-full rounded-lg"
-              style={{ width: `${((currentQuestionIndex + 1) / QUESTIONS.length) * 100}%` }}
-            />
-          </div>
+          <Progress value={((currentQuestionIndex + 1) / QUESTIONS.length) * 100} className="h-2" />
         </div>
 
-        <div className="space-y-6">
-          <h2 className="question-title">
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-foreground">
             {question.text}
           </h2>
 
           {question.type === 'single_select' && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {question.options.map((option, index) => (
-                <div
+                <Button
                   key={index}
-                  className={`question-option ${currentResponse === option ? 'selected' : ''}`}
+                  variant={currentResponse === option ? "default" : "outline"}
+                  className="w-full justify-start text-left h-auto p-4"
                   onClick={() => handleResponse(question.id, option)}
                 >
                   {option}
-                </div>
+                </Button>
               ))}
             </div>
           )}
 
           {question.type === 'multiple_select' && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {question.options.map((option, index) => (
-                <div key={index} className="flex items-center space-x-3 question-option">
+                <div key={index} className="flex items-center space-x-2 p-3 border rounded-lg">
                   <Checkbox
                     id={`${question.id}_${index}`}
                     checked={(currentResponse || []).includes(option)}
@@ -786,36 +812,32 @@ Email: info@stateaistrategies.com
               placeholder="Please provide your response..."
               value={currentResponse}
               onChange={(e) => handleResponse(question.id, e.target.value)}
-              className="min-h-[120px] border-2 focus:border-[var(--green)]"
+              className="min-h-[100px]"
             />
           )}
         </div>
 
         {error && (
-          <div className="flex items-center space-x-2 text-red-600 mt-4">
+          <div className="flex items-center space-x-2 text-destructive">
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm">{error}</span>
           </div>
         )}
 
-        <div className="flex justify-between mt-8">
+        <div className="flex justify-between">
           <Button
             variant="outline"
             onClick={previousQuestion}
             disabled={currentQuestionIndex === 0}
-            className="btn-secondary"
           >
             Previous
           </Button>
-          <Button 
-            onClick={nextQuestion}
-            className="btn-primary"
-          >
+          <Button onClick={nextQuestion}>
             {currentQuestionIndex === QUESTIONS.length - 1 ? 'Generate Report' : 'Continue'}
           </Button>
         </div>
 
-        <div className="text-center text-sm text-gray-500 mt-4">
+        <div className="text-center text-sm text-muted-foreground">
           Section: {question.section.toUpperCase().replace('_', ' ')}
         </div>
       </div>
@@ -823,85 +845,41 @@ Email: info@stateaistrategies.com
   };
 
   const ReportProgress = () => (
-    <div className="assessment-content">
-      <div className="assessment-card">
-        <div className="assessment-header">
-          <Sparkles className="h-12 w-12 mx-auto mb-4 text-[var(--yellow)]" />
-          <h2 className="assessment-title">Generating Your <span className="ai-highlight">AI</span> Report</h2>
-          <p className="assessment-subtitle">
-            Please wait while we compile your comprehensive AI assessment report...
-          </p>
+    <div className="max-w-md mx-auto space-y-6">
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl font-bold">Generating Your Report</h2>
+        <p className="text-muted-foreground">
+          Please wait while we compile your comprehensive AI assessment report...
+        </p>
+      </div>
+      
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>Progress</span>
+            <span>{reportProgress}%</span>
+          </div>
+          <Progress value={reportProgress} className="h-3" />
         </div>
         
-        <div className="question-container">
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm font-medium">
-                <span>Progress</span>
-                <span>{reportProgress}%</span>
-              </div>
-              <div className="progress-bar h-4">
-                <div 
-                  className="progress-fill h-full rounded-lg"
-                  style={{ width: `${reportProgress}%` }}
-                />
-              </div>
+        <div className="text-center space-y-4">
+          <p className="text-sm text-muted-foreground">{reportMessage}</p>
+          
+          {reportStatus === 'generating' && (
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          )}
+          
+          {reportStatus === 'completed' && (
+            <div className="space-y-2">
+              <CheckCircle className="h-8 w-8 mx-auto text-green-600" />
+              <p className="text-green-600 font-semibold">Report Generated Successfully!</p>
+              <p className="text-sm text-muted-foreground">Your download should start automatically.</p>
+              <Button onClick={downloadReport} className="mt-4">
+                <Download className="h-4 w-4 mr-2" />
+                Download Report
+              </Button>
             </div>
-            
-            <div className="text-center space-y-6">
-              <p className="text-gray-600">{reportMessage}</p>
-              
-              {reportStatus === 'generating' && (
-                <Loader2 className="h-12 w-12 animate-spin mx-auto text-[var(--green)]" />
-              )}
-              
-              {reportStatus === 'completed' && (
-                <div className="space-y-6">
-                  <CheckCircle className="h-12 w-12 mx-auto text-[var(--green)]" />
-                  <p className="text-[var(--green)] font-semibold text-lg">Assessment Complete!</p>
-                  
-                  <div className="value-box">
-                    <h3 className="value-title">
-                      <Zap className="inline h-5 w-5 mr-2 spark-accent" />
-                      Ready for Your Comprehensive Report?
-                    </h3>
-                    <p className="text-gray-700 mb-4">
-                      Your free assessment is complete! Get your detailed 20+ page <span className="ai-highlight">AI</span> implementation roadmap with:
-                    </p>
-                    <ul className="text-gray-700 space-y-2 mb-6 text-left">
-                      <li>• Personalized <span className="ai-highlight">AI</span> recommendations for your business</li>
-                      <li>• ROI analysis and implementation timeline</li>
-                      <li>• Step-by-step action plan</li>
-                      <li>• Direct mapping to proven <span className="ai-highlight">AI</span> solutions</li>
-                    </ul>
-                    
-                    <div className="flex flex-col space-y-3">
-                      <Button 
-                        onClick={() => window.open('https://buy.stripe.com/9B66oz2Z4caofVYcV74gg00', '_blank')}
-                        className="btn-accent text-lg font-bold py-4"
-                        size="lg"
-                      >
-                        Get Full Report - $499 <span className="text-sm opacity-75">(Reg. $999)</span>
-                      </Button>
-                      
-                      <Button 
-                        onClick={downloadReport} 
-                        variant="outline"
-                        className="btn-secondary"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Free Summary
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <p className="text-xs text-gray-500">
-                    Secure payment processing by Stripe • 30-day money-back guarantee
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -909,20 +887,24 @@ Email: info@stateaistrategies.com
 
   if (currentStep === 'report') {
     return (
-      <div className="assessment-container">
-        <ReportProgress />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8">
+            <ReportProgress />
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (currentStep === 'questions') {
     return (
-      <div className="assessment-container">
-        <div className="assessment-content">
-          <div className="assessment-card">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl">
+          <CardContent className="p-8">
             {renderQuestion()}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -930,92 +912,136 @@ Email: info@stateaistrategies.com
   return (
     <div className="assessment-container">
       <div className="assessment-content">
-        <div className="assessment-card">
-          <div className="assessment-header">
-            <Sparkles className="h-16 w-16 mx-auto mb-4 text-[var(--yellow)]" />
-            <h1 className="assessment-title">
+        <div className="landing-page">
+          <div className="landing-header">
+            <div className="logo-container">
+              <img 
+                src="/state-ai-strategies-logo.jpg" 
+                alt="State AI Strategies" 
+                className="logo-image"
+              />
+            </div>
+            <h1 className="landing-title">
               <span className="ai-highlight">AI</span> Readiness Assessment
             </h1>
-            <p className="assessment-subtitle">
+            <p className="landing-subtitle">
               Discover how AI can transform your business operations and drive growth
             </p>
             
-            <div className="value-box mt-6">
-              <h3 className="value-title text-white">
-                <Zap className="inline h-5 w-5 mr-2 spark-accent" />
+            <div className="value-highlight">
+              <h3>
+                <img 
+                  src="/state-ai-strategies-logo.jpg" 
+                  alt="State AI Strategies" 
+                  className="inline h-6 w-6 mr-2 brightness-150"
+                />
                 What You'll Get:
               </h3>
-              <ul className="text-white space-y-2 text-left opacity-90">
-                <li>• Comprehensive analysis of your business operations</li>
-                <li>• Identification of <span className="ai-highlight">AI</span> automation opportunities</li>
-                <li>• Personalized recommendations with ROI estimates</li>
-                <li>• Professional 20+ page implementation roadmap</li>
-                <li>• Direct mapping to proven <span className="ai-highlight">AI</span> solutions</li>
+              <ul>
+                <li>Comprehensive AI readiness analysis</li>
+                <li>Personalized implementation roadmap</li>
+                <li>ROI projections and cost-benefit analysis</li>
+                <li>Priority recommendations for your industry</li>
+                <li>Professional 20+ page detailed report</li>
               </ul>
             </div>
           </div>
+          
+          <div className="landing-form">
+            <div className="form-header">
+              <h2 className="form-title">Get Started</h2>
+              <p className="form-subtitle">
+                Tell us about your business to receive your personalized AI assessment
+              </p>
+            </div>
 
-          <div className="question-container">
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <Label htmlFor="businessName" className="text-base font-semibold">Business Name *</Label>
-                <Input
-                  id="businessName"
-                  placeholder="Enter your business name"
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Business Name *</label>
+                <input
+                  type="text"
                   value={businessInfo.businessName}
                   onChange={(e) => handleInputChange('businessName', e.target.value)}
-                  className="border-2 focus:border-[var(--green)] text-lg p-4"
+                  placeholder="Enter your business name"
+                  className="form-input"
                 />
               </div>
 
-              <div className="space-y-4">
-                <Label htmlFor="contactName" className="text-base font-semibold">Your Name *</Label>
-                <Input
-                  id="contactName"
-                  placeholder="Enter your full name"
+              <div className="form-group">
+                <label className="form-label">Your Name *</label>
+                <input
+                  type="text"
                   value={businessInfo.contactName}
                   onChange={(e) => handleInputChange('contactName', e.target.value)}
-                  className="border-2 focus:border-[var(--green)] text-lg p-4"
+                  placeholder="Enter your full name"
+                  className="form-input"
                 />
               </div>
 
-              <div className="space-y-4">
-                <Label htmlFor="contactEmail" className="text-base font-semibold">Email Address *</Label>
-                <Input
-                  id="contactEmail"
+              <div className="form-group">
+                <label className="form-label">Email Address *</label>
+                <input
                   type="email"
-                  placeholder="Enter your email address"
                   value={businessInfo.contactEmail}
                   onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                  className="border-2 focus:border-[var(--green)] text-lg p-4"
+                  placeholder="Enter your email address"
+                  className="form-input"
                 />
               </div>
+            </div>
 
-              {error && (
-                <div className="flex items-center space-x-2 text-red-600">
-                  <AlertCircle className="h-5 w-5" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <Button
+            <div className="cta-section">
+              <h3 className="cta-title">Professional AI Assessment - $499</h3>
+              <p className="cta-description">
+                Get a comprehensive analysis of your business operations and discover exactly how AI can transform your company. Our expert assessment includes personalized recommendations, ROI projections, and a detailed implementation roadmap.
+              </p>
+              
+              <button
                 onClick={startAssessment}
                 disabled={loading}
-                className="btn-primary w-full text-lg font-bold py-4"
-                size="lg"
+                className="cta-button"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                     Starting Assessment...
                   </>
                 ) : (
                   <>
-                    Begin Assessment ($499 Value)
-                    <Sparkles className="h-5 w-5 ml-2" />
+                    Begin Assessment - $499
+                    <img 
+                      src="/state-ai-strategies-logo.jpg" 
+                      alt="State AI Strategies" 
+                      className="h-5 w-5"
+                    />
                   </>
                 )}
-              </Button>
+              </button>
+            </div>
+
+            {error && (
+              <div className="error-message">
+                <AlertCircle className="h-5 w-5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="trust-section">
+              <p className="trust-text">Professional AI consulting trusted by businesses across industries</p>
+              <div className="trust-badges">
+                <div className="trust-badge">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span>Expert Analysis</span>
+                </div>
+                <div className="trust-badge">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span>Detailed Report</span>
+                </div>
+                <div className="trust-badge">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span>Implementation Roadmap</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1025,3 +1051,4 @@ Email: info@stateaistrategies.com
 }
 
 export default App;
+

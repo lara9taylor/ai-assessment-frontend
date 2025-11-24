@@ -10,7 +10,7 @@ import { CheckCircle, AlertCircle, Loader2, Download } from 'lucide-react';
 import './App.css';
 
 // Stripe Payment Link
-const STRIPE_PAYMENT_URL = 'https://buy.stripe.com/9B66oz2Z4caofVYcV74gg00';
+const STRIPE_PAYMENT_URL = 'https://buy.stripe.com/5kQ8wH438fmA9xA7AN4gg01';
 
 // Railway backend URL
 const API_BASE_URL = 'https://ai-assessment-backend-v2-production.up.railway.app/api';
@@ -991,7 +991,7 @@ function App() {
             </div>
 
             <div className="cta-section">
-              <h3 className="cta-title">Professional AI Assessment - $499</h3>
+              <h3 className="cta-title">Professional AI Assessment - $199</h3>
               <p className="cta-description">
                 Get a comprehensive analysis of your business operations and discover exactly how AI can transform your company. Our expert assessment includes personalized recommendations, ROI projections, and a detailed implementation roadmap.
               </p>
@@ -1008,7 +1008,7 @@ function App() {
                   </>
                 ) : (
                   <>
-                    Begin Assessment - $499
+                    Begin Assessment - $199
                     <img 
                       src="/state-ai-strategies-logo.jpg" 
                       alt="State AI Strategies" 
